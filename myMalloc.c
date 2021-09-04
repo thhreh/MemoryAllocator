@@ -197,6 +197,7 @@ static header * allocate_chunk(size_t size) {
 static inline header * allocate_object(size_t raw_size) {
   // TODO implement allocation
   (void) raw_size;
+
   assert(false);
   exit(1);
 }
