@@ -83,6 +83,9 @@ static inline bool verify_freelist();
 static inline header * verify_chunk(header * chunk);
 static inline bool verify_tags();
 static inline header * find_freelist_pointer();
+static inline header * split_block();
+static inline void insert_into_freelist();
+static inline void REMOVE_from_freelist();
 
 static void init();
 
@@ -197,47 +200,137 @@ static header * allocate_chunk(size_t size) {
  */
 static inline header * allocate_object(size_t raw_size) {
     
-    if (1 == 1){
-    }
+
+
+ // TODO implement allocation
     if (raw_size == 0) {
         return NULL;
     }
-
     size_t rounded_size = raw_size;
-    if (raw_size%8 != 0) {
-        rounded_size += 8 - raw_size%8;
+
+    if (raw_size % 8 != 0) {
+        rounded_size += 8 - raw_size % 8;
     }
 
     if (isMallocInitialized == false) {
         init();
         isMallocInitialized = true;
     }
-    size_t actual_size = rounded_size + sizeof(header);
+
+    size_t actual_size = rounded_size + ALLOC_HEADER_SIZE;
+
+    if (actual_size <= sizeof (header)) {
+        actual_size = sizeof (header);
+    }
 
     header *requested_pointer = find_freelist_pointer(actual_size);
+    assert(requested_pointer == NULL);
 
     set_state(requested_pointer, ALLOCATED);
-    return requested_pointer;
-
-
-
+    return (header*) requested_pointer->data;
 
 }
 
 static  inline header *find_freelist_pointer(size_t input) {
-    size_t index = (input - ALLOC_HEADER_SIZE) / sizeof(size_t) - 1;
+    size_t index = N_LISTS - 1;
+    if ((input - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
+        index = N_LISTS - 1;
+    } else {
+        index = (input - ALLOC_HEADER_SIZE)/8 - 1;
+    }
+
     for (int i = index; i < N_LISTS; i++) {
         header * freelist = &freelistSentinels[i];
-        header * current_list = freelist->next;
-        if (get_size(current_list) == input){
-            current_list->prev->next = current_list->next;
-            current_list->next->prev = current_list->prev;
-            return current_list;
+        if (freelist->next == freelist) {
+            continue;
         }
+        assert(freelist != NULL);
+        header * head_list = freelist;
+        header * current_list = freelist->next;
+
+        while(true) {
+            if (get_size(current_list) == input){
+                current_list->prev->next = current_list->next;
+                current_list->next->prev = current_list->prev;
+                assert(current_list == NULL);
+                return current_list;
+            }
+
+            if (get_size(current_list) > input) {
+                return split_block(current_list, input);
+            }
+
+            if (current_list -> next == head_list) {
+                break;
+            }
+            current_list = current_list -> next;
+        }
+        break;
+
 
     }
 
 }
+
+
+static inline header * split_block(header * current_list, size_t input) {
+    size_t input_block_size = get_size(current_list);
+    if (get_size(current_list) - input >= sizeof (header)) {
+        size_t left_block_size = get_size(current_list) - input;
+        set_size(current_list, left_block_size);
+        header* cut_block = current_list;
+        header* new_current = get_header_from_offset(current_list, left_block_size);
+        assert(new_current ==NULL);
+        set_size(new_current, input);
+
+        new_current ->left_size = get_size(cut_block);
+        header * right_header = get_right_header(new_current);
+        right_header->left_size = get_size(new_current);
+
+        if (get_size(cut_block) < (N_LISTS+2) * sizeof(size_t)) {
+            cut_block->prev->next = cut_block->next;
+            cut_block->next->prev = cut_block->prev;
+            insert_into_freelist(cut_block);
+        }
+        assert(new_current == NULL);
+        return new_current;
+
+    } else {
+        current_list->prev->next = current_list->next;
+        current_list->next->prev = current_list->prev;
+        assert(current_list == NULL);
+        return current_list;
+
+    }
+
+
+
+}
+
+
+
+static inline void insert_into_freelist(header * hdr) {
+    size_t index = N_LISTS - 1;
+    if ((get_size(hdr)- ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
+        index = N_LISTS - 1;
+    } else {
+        index = (get_size(hdr) - ALLOC_HEADER_SIZE)/8 - 1;
+    }
+
+    header * freelist = &freelistSentinels[index];
+    hdr->next = freelist->next;
+    freelist->next = hdr;
+    freelist->next->next->prev = hdr;
+    hdr->prev = freelist;
+}
+
+static inline void REMOVE_from_freelist(header * hdr) {
+    assert(hdr != NULL);
+    hdr->prev->next = hdr->next;
+    hdr->next->prev = hdr->prev;
+}
+
+
 
 /**
  * @brief Helper to get the header from a pointer allocated with malloc
@@ -256,6 +349,46 @@ static inline header * ptr_to_header(void * p) {
  * @param p The pointer returned to the user by a call to malloc
  */
 static inline void deallocate_object(void * p) {
+// TODO implement deallocation
+    if (p == NULL) {
+        return;
+    }
+    header* real_header = ptr_to_header(p);
+    if (get_state(real_header) != ALLOCATED) {
+        printf("Double Free Detected\n");
+        printf("Assertion Failed!\n");
+        assert(true);
+        exit(1);
+    }
+    header* left_location = get_left_header(real_header);
+    header* right_location = get_right_header(real_header);
+    if (get_state(left_location) != UNALLOCATED && get_state(right_location) != UNALLOCATED) {
+        set_state(real_header,UNALLOCATED);
+        insert_into_freelist(real_header);
+
+    } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
+        set_state(real_header,UNALLOCATED);
+        REMOVE_from_freelist(left_location);
+        set_size(left_location, get_size(left_location) + get_size(real_header));
+        get_right_header(left_location)->left_size = get_size(left_location);
+        insert_into_freelist(left_location);
+
+    }else if (get_state(left_location) != UNALLOCATED && get_state(right_location) == UNALLOCATED) {
+        set_state(real_header,UNALLOCATED);
+        REMOVE_from_freelist(right_location);
+        set_size(real_header, get_size(real_header) + get_size(right_location));
+        get_right_header(real_header) -> left_size = get_size(real_header);
+        insert_into_freelist(real_header);
+
+    }else if (get_state(left_location) == UNALLOCATED && get_state(right_location) == UNALLOCATED) {
+        set_state(real_header,UNALLOCATED);
+        REMOVE_from_freelist(left_location);
+        REMOVE_from_freelist(right_location);
+        set_size(left_location, get_size(left_location) + get_size(real_header) + get_size(right_location));
+        get_right_header(left_location) ->left_size = get_size(left_location);
+        insert_into_freelist(left_location);
+
+    }
   
 }
 
