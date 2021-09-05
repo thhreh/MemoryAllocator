@@ -9,7 +9,7 @@
 #include "myMalloc.h"
 #include "printing.h"
 
-/* Due1212 to the way assert() prints error messges we use out own assert function
+/* Due to the way assert() prints error messges we use out own assert function
  * for deteminism when testing assertions
  */
 #ifdef TEST_ASSERT
@@ -86,6 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
+
 
 static void init();
 
@@ -196,13 +197,10 @@ static header * allocate_chunk(size_t size) {
  *
  * @param raw_size number of bytes the user needs
  *
- * @return A block satisfying the user's request
+ * @return A block satisfying the user's requests
  */
 static inline header * allocate_object(size_t raw_size) {
-    
-
-
- // TODO implement allocation
+    // TODO implement allocation
     if (raw_size == 0) {
         return NULL;
     }
@@ -212,10 +210,6 @@ static inline header * allocate_object(size_t raw_size) {
         rounded_size += 8 - raw_size % 8;
     }
 
-    if (isMallocInitialized == false) {
-        init();
-        isMallocInitialized = true;
-    }
 
     size_t actual_size = rounded_size + ALLOC_HEADER_SIZE;
 
@@ -224,7 +218,7 @@ static inline header * allocate_object(size_t raw_size) {
     }
 
     header *requested_pointer = find_freelist_pointer(actual_size);
-    assert(requested_pointer == NULL);
+    assert(requested_pointer != NULL);
 
     set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
@@ -252,7 +246,7 @@ static  inline header *find_freelist_pointer(size_t input) {
             if (get_size(current_list) == input){
                 current_list->prev->next = current_list->next;
                 current_list->next->prev = current_list->prev;
-                assert(current_list == NULL);
+                assert(current_list != NULL);
                 return current_list;
             }
 
@@ -280,7 +274,7 @@ static inline header * split_block(header * current_list, size_t input) {
         set_size(current_list, left_block_size);
         header* cut_block = current_list;
         header* new_current = get_header_from_offset(current_list, left_block_size);
-        assert(new_current ==NULL);
+        assert(new_current != NULL);
         set_size(new_current, input);
 
         new_current ->left_size = get_size(cut_block);
@@ -292,13 +286,13 @@ static inline header * split_block(header * current_list, size_t input) {
             cut_block->next->prev = cut_block->prev;
             insert_into_freelist(cut_block);
         }
-        assert(new_current == NULL);
+        assert(new_current != NULL);
         return new_current;
 
     } else {
         current_list->prev->next = current_list->next;
         current_list->next->prev = current_list->prev;
-        assert(current_list == NULL);
+        assert(current_list != NULL);
         return current_list;
 
     }
@@ -331,7 +325,6 @@ static inline void REMOVE_from_freelist(header * hdr) {
 }
 
 
-
 /**
  * @brief Helper to get the header from a pointer allocated with malloc
  *
@@ -349,7 +342,7 @@ static inline header * ptr_to_header(void * p) {
  * @param p The pointer returned to the user by a call to malloc
  */
 static inline void deallocate_object(void * p) {
-// TODO implement deallocation
+    // TODO implement deallocation
     if (p == NULL) {
         return;
     }
@@ -389,7 +382,7 @@ static inline void deallocate_object(void * p) {
         insert_into_freelist(left_location);
 
     }
-  
+
 }
 
 /**
@@ -564,10 +557,10 @@ void my_free(void * p) {
     pthread_mutex_unlock(&mutex);
 }
 
+bool veryfy(){
 
-
-bool verify(){
 }
+
 
 
 
