@@ -196,6 +196,13 @@ static header * allocate_chunk(size_t size) {
  * @return A block satisfying the user's request
  */
 static inline header * allocate_object(size_t raw_size) {
+    
+
+
+
+
+
+
     if (raw_size == 0) {
         return NULL;
     }
