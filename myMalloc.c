@@ -557,9 +557,11 @@ void my_free(void * p) {
     pthread_mutex_unlock(&mutex);
 }
 
-bool veryfy(){
+bool verify(){
 
 }
+
+
 
 
 
