@@ -197,12 +197,8 @@ static header * allocate_chunk(size_t size) {
  */
 static inline header * allocate_object(size_t raw_size) {
     
-
-
-
-
-
-
+    if (1 == 1){
+    }
     if (raw_size == 0) {
         return NULL;
     }
