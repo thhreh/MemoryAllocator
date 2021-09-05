@@ -9,7 +9,7 @@
 #include "myMalloc.h"
 #include "printing.h"
 
-/* Due to the way assert() prints error messges we use out own assert function
+/* Due1212 to the way assert() prints error messges we use out own assert function
  * for deteminism when testing assertions
  */
 #ifdef TEST_ASSERT
