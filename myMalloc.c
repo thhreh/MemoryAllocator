@@ -13,7 +13,7 @@
  * for deteminism when testing assertions
  */
 #ifdef TEST_ASSERT
-  inline static void assert(int e) {
+inline static void assert(int e) {
     if (!e) {
       const char * msg = "Assertion Failed!\n";
       write(2, msg, strlen(msg));
@@ -21,7 +21,7 @@
     }
   }
 #else
-  #include <assert.h>
+#include <assert.h>
 #endif
 
 /*
@@ -43,7 +43,7 @@ header * lastFencePost;
 /*
  * Pointer to maintian the base of the heap to allow printing based on the
  * distance from the base of the heap
- */ 
+ */
 void * base;
 
 /*
@@ -75,20 +75,21 @@ static inline void deallocate_object(void * p);
 // Helper functions for allocating a block
 static inline header * allocate_object(size_t raw_size);
 
-// Helper functions for verifying that the data structures are structurally 
+// Helper functions for verifying that the data structures are structurally
 // valid
 static inline header * detect_cycles();
 static inline header * verify_pointers();
 static inline bool verify_freelist();
 static inline header * verify_chunk(header * chunk);
 static inline bool verify_tags();
+static inline header * find_freelist_pointer();
 
 static void init();
 
 static bool isMallocInitialized;
 
 /**
- * @brief Helper function to retrieve a header pointer from a pointer and an 
+ * @brief Helper function to retrieve a header pointer from a pointer and an
  *        offset
  *
  * @param ptr base pointer
@@ -97,7 +98,7 @@ static bool isMallocInitialized;
  * @return a pointer to a header offset bytes from pointer
  */
 static inline header * get_header_from_offset(void * ptr, ptrdiff_t off) {
-	return (header *)((char *) ptr + off);
+    return (header *)((char *) ptr + off);
 }
 
 /**
@@ -108,7 +109,7 @@ static inline header * get_header_from_offset(void * ptr, ptrdiff_t off) {
  * @return header to the right of h
  */
 header * get_right_header(header * h) {
-	return get_header_from_offset(h, get_size(h));
+    return get_header_from_offset(h, get_size(h));
 }
 
 /**
@@ -119,7 +120,7 @@ header * get_right_header(header * h) {
  * @return header to the right of h
  */
 inline static header * get_left_header(header * h) {
-  return get_header_from_offset(h, -h->left_size);
+    return get_header_from_offset(h, -h->left_size);
 }
 
 /**
@@ -130,9 +131,9 @@ inline static header * get_left_header(header * h) {
  * @param left_size the size of the object to the left of the fencepost
  */
 inline static void initialize_fencepost(header * fp, size_t left_size) {
-	set_state(fp,FENCEPOST);
-	set_size(fp, ALLOC_HEADER_SIZE);
-	fp->left_size = left_size;
+    set_state(fp,FENCEPOST);
+    set_size(fp, ALLOC_HEADER_SIZE);
+    fp->left_size = left_size;
 }
 
 /**
@@ -141,13 +142,13 @@ inline static void initialize_fencepost(header * fp, size_t left_size) {
  * @param hdr the first fencepost in the chunk allocated by the OS
  */
 inline static void insert_os_chunk(header * hdr) {
-  if (numOsChunks < MAX_OS_CHUNKS) {
-    osChunkList[numOsChunks++] = hdr;
-  }
+    if (numOsChunks < MAX_OS_CHUNKS) {
+        osChunkList[numOsChunks++] = hdr;
+    }
 }
 
 /**
- * @brief given a chunk of memory insert fenceposts at the left and 
+ * @brief given a chunk of memory insert fenceposts at the left and
  * right boundaries of the block to prevent coalescing outside of the
  * block
  *
@@ -155,16 +156,16 @@ inline static void insert_os_chunk(header * hdr) {
  * @param size the size of the allocated chunk
  */
 inline static void insert_fenceposts(void * raw_mem, size_t size) {
-  // Convert to char * before performing operations
-  char * mem = (char *) raw_mem;
+    // Convert to char * before performing operations
+    char * mem = (char *) raw_mem;
 
-  // Insert a fencepost at the left edge of the block
-  header * leftFencePost = (header *) mem;
-  initialize_fencepost(leftFencePost, ALLOC_HEADER_SIZE);
+    // Insert a fencepost at the left edge of the block
+    header * leftFencePost = (header *) mem;
+    initialize_fencepost(leftFencePost, ALLOC_HEADER_SIZE);
 
-  // Insert a fencepost at the right edge of the block
-  header * rightFencePost = get_header_from_offset(mem, size - ALLOC_HEADER_SIZE);
-  initialize_fencepost(rightFencePost, size - 2 * ALLOC_HEADER_SIZE);
+    // Insert a fencepost at the right edge of the block
+    header * rightFencePost = get_header_from_offset(mem, size - ALLOC_HEADER_SIZE);
+    initialize_fencepost(rightFencePost, size - 2 * ALLOC_HEADER_SIZE);
 }
 
 /**
@@ -173,18 +174,18 @@ inline static void insert_fenceposts(void * raw_mem, size_t size) {
  *
  * @param size The size to allocate from the OS
  *
- * @return A pointer to the allocable block in the chunk (just after the 
+ * @return A pointer to the allocable block in the chunk (just after the
  * first fencpost)
  */
 static header * allocate_chunk(size_t size) {
-  void * mem = sbrk(size);
-  
-  insert_fenceposts(mem, size);
-  header * hdr = (header *) ((char *)mem + ALLOC_HEADER_SIZE);
-  set_state(hdr, UNALLOCATED);
-  set_size(hdr, size - 2 * ALLOC_HEADER_SIZE);
-  hdr->left_size = ALLOC_HEADER_SIZE;
-  return hdr;
+    void * mem = sbrk(size);
+
+    insert_fenceposts(mem, size);
+    header * hdr = (header *) ((char *)mem + ALLOC_HEADER_SIZE);
+    set_state(hdr, UNALLOCATED);
+    set_size(hdr, size - 2 * ALLOC_HEADER_SIZE);
+    hdr->left_size = ALLOC_HEADER_SIZE;
+    return hdr;
 }
 
 /**
@@ -195,11 +196,44 @@ static header * allocate_chunk(size_t size) {
  * @return A block satisfying the user's request
  */
 static inline header * allocate_object(size_t raw_size) {
-  // TODO implement allocation
-  (void) raw_size;
+    // TODO implement allocation
+    if (raw_size <= 0) {
+        return NULL;
+    }
+    size_t rounded_size = raw_size;
+    if (raw_size%8 != 0) {
+        rounded_size += 8 - raw_size%8;
+    }
 
-  assert(false);
-  exit(1);
+    if (isMallocInitialized == false) {
+        init();
+        isMallocInitialized = true;
+    }
+    size_t actual_size = rounded_size + sizeof(header);
+
+    header *requested_pointer = find_freelist_pointer(actual_size);
+
+    set_state(requested_pointer, ALLOCATED);
+    return requested_pointer;
+
+
+
+
+}
+
+static  inline header *find_freelist_pointer(size_t input) {
+    size_t index = (input - ALLOC_HEADER_SIZE) / sizeof(size_t) - 1;
+    for (int i = index; i < N_LISTS; i++) {
+        header * freelist = &freelistSentinels[i];
+        header * current_list = freelist->next;
+        if (get_size(current_list) == input){
+            current_list->prev->next = current_list->next;
+            current_list->next->prev = current_list->prev;
+            return current_list;
+        }
+
+    }
+
 }
 
 /**
@@ -210,7 +244,7 @@ static inline header * allocate_object(size_t raw_size) {
  * @return A pointer to the header of the block
  */
 static inline header * ptr_to_header(void * p) {
-  return (header *)((char *) p - ALLOC_HEADER_SIZE); //sizeof(header));
+    return (header *)((char *) p - ALLOC_HEADER_SIZE); //sizeof(header));
 }
 
 /**
@@ -219,10 +253,10 @@ static inline header * ptr_to_header(void * p) {
  * @param p The pointer returned to the user by a call to malloc
  */
 static inline void deallocate_object(void * p) {
-  // TODO implement deallocation
-  (void) p;
-  assert(false);
-  exit(1);
+    // TODO implement deallocation
+    (void) p;
+    assert(false);
+    exit(1);
 }
 
 /**
@@ -232,17 +266,17 @@ static inline void deallocate_object(void * p) {
  * @return One of the nodes in the cycle or NULL if no cycle is present
  */
 static inline header * detect_cycles() {
-  for (int i = 0; i < N_LISTS; i++) {
-    header * freelist = &freelistSentinels[i];
-    for (header * slow = freelist->next, * fast = freelist->next->next; 
-         fast != freelist; 
-         slow = slow->next, fast = fast->next->next) {
-      if (slow == fast) {
-        return slow;
-      }
+    for (int i = 0; i < N_LISTS; i++) {
+        header * freelist = &freelistSentinels[i];
+        for (header * slow = freelist->next, * fast = freelist->next->next;
+             fast != freelist;
+             slow = slow->next, fast = fast->next->next) {
+            if (slow == fast) {
+                return slow;
+            }
+        }
     }
-  }
-  return NULL;
+    return NULL;
 }
 
 /**
@@ -253,39 +287,39 @@ static inline header * detect_cycles() {
  *         such node exists
  */
 static inline header * verify_pointers() {
-  for (int i = 0; i < N_LISTS; i++) {
-    header * freelist = &freelistSentinels[i];
-    for (header * cur = freelist->next; cur != freelist; cur = cur->next) {
-      if (cur->next->prev != cur || cur->prev->next != cur) {
-        return cur;
-      }
+    for (int i = 0; i < N_LISTS; i++) {
+        header * freelist = &freelistSentinels[i];
+        for (header * cur = freelist->next; cur != freelist; cur = cur->next) {
+            if (cur->next->prev != cur || cur->prev->next != cur) {
+                return cur;
+            }
+        }
     }
-  }
-  return NULL;
+    return NULL;
 }
 
 /**
- * @brief Verify the structure of the free list is correct by checkin for 
+ * @brief Verify the structure of the free list is correct by checkin for
  *        cycles and misdirected pointers
  *
  * @return true if the list is valid
  */
 static inline bool verify_freelist() {
-  header * cycle = detect_cycles();
-  if (cycle != NULL) {
-    fprintf(stderr, "Cycle Detected\n");
-    print_sublist(print_object, cycle->next, cycle);
-    return false;
-  }
+    header * cycle = detect_cycles();
+    if (cycle != NULL) {
+        fprintf(stderr, "Cycle Detected\n");
+        print_sublist(print_object, cycle->next, cycle);
+        return false;
+    }
 
-  header * invalid = verify_pointers();
-  if (invalid != NULL) {
-    fprintf(stderr, "Invalid pointers\n");
-    print_object(invalid);
-    return false;
-  }
+    header * invalid = verify_pointers();
+    if (invalid != NULL) {
+        fprintf(stderr, "Invalid pointers\n");
+        print_object(invalid);
+        return false;
+    }
 
-  return true;
+    return true;
 }
 
 /**
@@ -297,21 +331,21 @@ static inline bool verify_freelist() {
  * @return a pointer to an invalid header or NULL if all header's are valid
  */
 static inline header * verify_chunk(header * chunk) {
-	if (get_state(chunk) != FENCEPOST) {
-		fprintf(stderr, "Invalid fencepost\n");
-		print_object(chunk);
-		return chunk;
-	}
-	
-	for (; get_state(chunk) != FENCEPOST; chunk = get_right_header(chunk)) {
-		if (get_size(chunk)  != get_right_header(chunk)->left_size) {
-			fprintf(stderr, "Invalid sizes\n");
-			print_object(chunk);
-			return chunk;
-		}
-	}
-	
-	return NULL;
+    if (get_state(chunk) != FENCEPOST) {
+        fprintf(stderr, "Invalid fencepost\n");
+        print_object(chunk);
+        return chunk;
+    }
+
+    for (; get_state(chunk) != FENCEPOST; chunk = get_right_header(chunk)) {
+        if (get_size(chunk)  != get_right_header(chunk)->left_size) {
+            fprintf(stderr, "Invalid sizes\n");
+            print_object(chunk);
+            return chunk;
+        }
+    }
+
+    return NULL;
 }
 
 /**
@@ -321,82 +355,78 @@ static inline header * verify_chunk(header * chunk) {
  * @return true if the boundary tags are valid
  */
 static inline bool verify_tags() {
-  for (size_t i = 0; i < numOsChunks; i++) {
-    header * invalid = verify_chunk(osChunkList[i]);
-    if (invalid != NULL) {
-      return invalid;
+    for (size_t i = 0; i < numOsChunks; i++) {
+        header * invalid = verify_chunk(osChunkList[i]);
+        if (invalid != NULL) {
+            return invalid;
+        }
     }
-  }
 
-  return NULL;
+    return NULL;
 }
 
 /**
  * @brief Initialize mutex lock and prepare an initial chunk of memory for allocation
  */
 static void init() {
-  // Initialize mutex for thread safety
-  pthread_mutex_init(&mutex, NULL);
+    // Initialize mutex for thread safety
+    pthread_mutex_init(&mutex, NULL);
 
 #ifdef DEBUG
-  // Manually set printf buffer so it won't call malloc when debugging the allocator
+    // Manually set printf buffer so it won't call malloc when debugging the allocator
   setvbuf(stdout, NULL, _IONBF, 0);
 #endif // DEBUG
 
-  // Allocate the first chunk from the OS
-  header * block = allocate_chunk(ARENA_SIZE);
+    // Allocate the first chunk from the OS
+    header * block = allocate_chunk(ARENA_SIZE);
 
-  header * prevFencePost = get_header_from_offset(block, -ALLOC_HEADER_SIZE);
-  insert_os_chunk(prevFencePost);
+    header * prevFencePost = get_header_from_offset(block, -ALLOC_HEADER_SIZE);
+    insert_os_chunk(prevFencePost);
 
-  lastFencePost = get_header_from_offset(block, get_size(block));
+    lastFencePost = get_header_from_offset(block, get_size(block));
 
-  // Set the base pointer to the beginning of the first fencepost in the first
-  // chunk from the OS
-  base = ((char *) block) - ALLOC_HEADER_SIZE; //sizeof(header);
+    // Set the base pointer to the beginning of the first fencepost in the first
+    // chunk from the OS
+    base = ((char *) block) - ALLOC_HEADER_SIZE; //sizeof(header);
 
-  // Initialize freelist sentinels
-  for (int i = 0; i < N_LISTS; i++) {
-    header * freelist = &freelistSentinels[i];
-    freelist->next = freelist;
-    freelist->prev = freelist;
-  }
+    // Initialize freelist sentinels
+    for (int i = 0; i < N_LISTS; i++) {
+        header * freelist = &freelistSentinels[i];
+        freelist->next = freelist;
+        freelist->prev = freelist;
+    }
 
-  // Insert first chunk into the free list
-  header * freelist = &freelistSentinels[N_LISTS - 1];
-  freelist->next = block;
-  freelist->prev = block;
-  block->next = freelist;
-  block->prev = freelist;
+    // Insert first chunk into the free list
+    header * freelist = &freelistSentinels[N_LISTS - 1];
+    freelist->next = block;
+    freelist->prev = block;
+    block->next = freelist;
+    block->prev = freelist;
 }
 
-/* 
+/*
  * External interface
  */
 void * my_malloc(size_t size) {
-  pthread_mutex_lock(&mutex);
-  header * hdr = allocate_object(size); 
-  pthread_mutex_unlock(&mutex);
-  return hdr;
+    pthread_mutex_lock(&mutex);
+    header * hdr = allocate_object(size);
+    pthread_mutex_unlock(&mutex);
+    return hdr;
 }
 
 void * my_calloc(size_t nmemb, size_t size) {
-  return memset(my_malloc(size * nmemb), 0, size * nmemb);
+    return memset(my_malloc(size * nmemb), 0, size * nmemb);
 }
 
 void * my_realloc(void * ptr, size_t size) {
-  void * mem = my_malloc(size);
-  memcpy(mem, ptr, size);
-  my_free(ptr);
-  return mem; 
+    void * mem = my_malloc(size);
+    memcpy(mem, ptr, size);
+    my_free(ptr);
+    return mem;
 }
 
 void my_free(void * p) {
-  pthread_mutex_lock(&mutex);
-  deallocate_object(p);
-  pthread_mutex_unlock(&mutex);
-}
-
-bool verify() {
-  return verify_freelist() && verify_tags();
+    pthread_mutex_lock(&mutex);
+    deallocate_object(p);
+    pthread_mutex_unlock(&mutex);
 }
