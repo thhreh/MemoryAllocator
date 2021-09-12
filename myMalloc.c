@@ -374,7 +374,7 @@ static inline void REMOVE_from_freelist(header * hdr) {
         return;
     }
     else if(hdr->prev->next != hdr || hdr->next->prev != hdr){
-        return
+        return;
     }
     hdr->prev->next = hdr->next;
     hdr->next->prev = hdr->prev;
