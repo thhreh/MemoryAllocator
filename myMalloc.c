@@ -266,21 +266,19 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_header_from_offset(newHeader, -ALLOC_HEADER_SIZE);
-    header * right_fencepost = get_header_from_offset(newHeader, get_size(newHeader));
-
-    header * prev_fencepost = get_header_from_offset(left_fencepost, -ALLOC_HEADER_SIZE);
+    header * prev_right_fencepost = get_header_from_offset(left_fencepost, -ALLOC_HEADER_SIZE);
 
 //    case 1: new chunk is adjecent and it is unallocated
 
-    if (prev_fencepost == lastFencePost) {
-        header * prev_header = get_left_header(prev_fencepost);
+    if (prev_right_fencepost == lastFencePost) {
+        header * prev_header = get_left_header(prev_right_fencepost);
         if (get_state(prev_header) == UNALLOCATED) {
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
-            right_fencepost->left_size = get_size(prev_header);
+            get_right_header(newHeader)->left_size = get_size(prev_header);
             REMOVE_from_freelist(prev_header);
             insert_into_freelist(prev_header);
-            lastFencePost = right_fencepost;
+            lastFencePost = get_right_header(newHeader);
 
 
             return allocate_object(raw_size);
@@ -288,17 +286,17 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
         } else {
 
             set_size(prev_header, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            right_fencepost->left_size = get_size(prev_header);
+            get_right_header(newHeader)->left_size = get_size(prev_header);
             set_state(prev_header, UNALLOCATED);
             insert_into_freelist(prev_header);
-            lastFencePost = right_fencepost;
+            lastFencePost = get_right_header(newHeader);
             return allocate_object(raw_size);
 
         }
 //        case 3: not adjacent
     } else {
         insert_into_freelist(newHeader);
-        lastFencePost = right_fencepost;
+        lastFencePost = get_right_header(newHeader);
         insert_os_chunk(left_fencepost);
         return allocate_object(raw_size);
 
@@ -605,13 +603,4 @@ void my_free(void * p) {
 
 bool verify(){
 
-
-
-
-
-
 }
-
-
-
-
