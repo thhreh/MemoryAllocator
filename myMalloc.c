@@ -293,9 +293,9 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
         } else {
 
             set_size(prev_right_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            get_right_header(newHeader)->left_size = get_size(prev_header);
-            set_state(prev_header, UNALLOCATED);
-            insert_into_freelist(prev_header);
+            get_right_header(newHeader)->left_size = get_size(prev_right_fencepost);
+            set_state(prev_right_fencepost, UNALLOCATED);
+            insert_into_freelist(prev_right_fencepost);
             lastFencePost = get_right_header(newHeader);
             return allocate_object(raw_size);
 
@@ -358,10 +358,12 @@ static inline void insert_into_freelist(header * hdr) {
     }
 
     header * freelist = &freelistSentinels[index];
-    hdr->next = freelist->next;
-    freelist->next = hdr;
     freelist->next->prev = hdr;
+    hdr->next = freelist->next;
     hdr->prev = freelist;
+    freelist->next = hdr;
+
+
 }
 
 static inline void REMOVE_from_freelist(header * hdr) {
