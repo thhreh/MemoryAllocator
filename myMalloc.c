@@ -282,11 +282,15 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-            if (index == N_LISTS - 1) {
-                REMOVE_from_freelist(prev_header);
-                insert_into_freelist(prev_header);
-                lastFencePost = get_right_header(newHeader);
-            }
+            header * lastfreelist = &freelistSentinels[N_LISTS - 1];
+            prev_header->next = lastfreelist->next;
+            lastfreelist->next = prev_header;
+            prev_header->next->prev = prev_header;
+            prev_header->prev = lastfreelist;
+            REMOVE_from_freelist(prev_header);
+            insert_into_freelist(prev_header);
+            lastFencePost = get_right_header(newHeader);
+
 
             return allocate_object(raw_size);
 //            case 2: new chunk is adjecent and it is allocated
