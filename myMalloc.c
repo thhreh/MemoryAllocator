@@ -249,8 +249,8 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
         while(current_list != freelist) {
             if (get_size(current_list) == input){
-                current_list->prev->next = current_list->next;
-                current_list->next->prev = current_list->prev;
+                REMOVE_from_freelist(current_list);
+                set_state(current_list,ALLOCATED);
                 assert(current_list != NULL);
                 return current_list;
             }
