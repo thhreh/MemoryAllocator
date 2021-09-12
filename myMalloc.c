@@ -285,7 +285,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 //            case 2: new chunk is adjecent and it is allocated
         } else {
 
-            set_size(prev_header, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
+            set_size(prev_right_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             get_right_header(newHeader)->left_size = get_size(prev_header);
             set_state(prev_header, UNALLOCATED);
             insert_into_freelist(prev_header);
