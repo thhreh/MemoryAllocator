@@ -273,6 +273,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     if (prev_right_fencepost == lastFencePost) {
         header * prev_header = get_left_header(prev_right_fencepost);
         if (get_state(prev_header) == UNALLOCATED) {
+            REMOVE_from_freelist(prev_header);
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
@@ -287,7 +288,6 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             lastfreelist->next = prev_header;
             prev_header->next->prev = prev_header;
             prev_header->prev = lastfreelist;
-            REMOVE_from_freelist(prev_header);
             insert_into_freelist(prev_header);
             lastFencePost = get_right_header(newHeader);
 
