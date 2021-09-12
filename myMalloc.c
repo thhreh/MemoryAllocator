@@ -368,6 +368,8 @@ static inline void insert_into_freelist(header * hdr) {
 
 static inline void REMOVE_from_freelist(header * hdr) {
     assert(hdr != NULL);
+    hdr->prev->next = hdr->prev->next;
+    hdr->next->prev = hdr->next->prev;
 
     if(hdr->prev == NULL || hdr->next == NULL){
         return;
