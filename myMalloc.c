@@ -316,7 +316,6 @@ static inline void insert_chunk_to_freelist() {
     }
 
 }
-}
 
 static inline bool last_freelist(header * hdr){
     return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
