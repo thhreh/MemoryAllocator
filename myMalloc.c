@@ -267,16 +267,14 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_left_header(newHeader);
-    header * prev_right_header = get_left_header(left_fencepost);
+    header * prev_right_fencepost = get_left_header(left_fencepost);
+
 
 //    case 1: new chunk is adjecent and it is unallocated
 
-    if (prev_right_header == lastFencePost) {
-        header * prev_header = get_left_header(lastFencePost);
+    if (prev_right_fencepost == lastFencePost) {
+        header * prev_header = get_left_header(prev_right_fencepost);
         if (get_state(prev_header) == UNALLOCATED) {
-                REMOVE_from_freelist(prev_header);
-            
-
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
@@ -286,10 +284,9 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-            
-            insert_into_freelist(prev_header);
-            
 
+            REMOVE_from_freelist(prev_header);
+            insert_into_freelist(prev_header);
             lastFencePost = get_right_header(newHeader);
 
 
@@ -311,7 +308,6 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
         lastFencePost = get_right_header(newHeader);
         insert_os_chunk(left_fencepost);
         return allocate_object(raw_size);
-
     }
 
 
@@ -374,6 +370,12 @@ static inline void insert_into_freelist(header * hdr) {
 
 static inline void REMOVE_from_freelist(header * hdr) {
     assert(hdr != NULL);
+    if(hdr->prev == NULL && hdr->next == NULL){
+        return;
+    }
+    else if(hdr->prev->next != hdr || hdr->next->prev != hdr){
+        return
+    }
     hdr->prev->next = hdr->next;
     hdr->next->prev = hdr->prev;
 }
