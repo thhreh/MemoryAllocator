@@ -86,7 +86,6 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
-static inline bool last_freelist();
 
 
 static void init();
@@ -284,7 +283,6 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-
             REMOVE_from_freelist(prev_header);
             insert_into_freelist(prev_header);
             lastFencePost = get_right_header(newHeader);
@@ -347,8 +345,6 @@ static inline header * split_block(header * current_list, size_t input) {
 
     }
 
-
-
 }
 
 
@@ -364,7 +360,7 @@ static inline void insert_into_freelist(header * hdr) {
     header * freelist = &freelistSentinels[index];
     hdr->next = freelist->next;
     freelist->next = hdr;
-    freelist->next->next->prev = hdr;
+    freelist->next->prev = hdr;
     hdr->prev = freelist;
 }
 
@@ -373,17 +369,11 @@ static inline void REMOVE_from_freelist(header * hdr) {
     if(hdr->prev == NULL && hdr->next == NULL){
         return;
     }
-    else if(hdr->prev->next != hdr || hdr->next->prev != hdr){
-        return;
-    }
+
     hdr->prev->next = hdr->next;
     hdr->next->prev = hdr->prev;
 }
 
-
-static inline bool last_freelist(header * hdr){
-    return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
-}
 
 /**
  * @brief Helper to get the header from a pointer allocated with malloc
