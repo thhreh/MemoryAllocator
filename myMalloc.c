@@ -221,8 +221,7 @@ static inline header * allocate_object(size_t raw_size) {
 
     header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
     assert(requested_pointer != NULL);
-
-    set_state(requested_pointer, ALLOCATED);
+    
     return (header*) requested_pointer->data;
 
 }
@@ -234,23 +233,21 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     } else {
         index = (input - ALLOC_HEADER_SIZE)/8 - 1;
     }
-    header *freelist_initial = &freelistSentinels[index];
-    while (freelist_initial->next == freelist_initial && index < N_LISTS - 1) {
-        index++;
-        freelist_initial = &freelistSentinels[index];
-    }
 
-
-    for (header * current_list = freelist_initial->next; current_list!=freelist_initial;) {
-        header * freelist = &freelistSentinels[index];
-        header* current_list = freelist->next;
+    for (int i = index; i < N_LISTS; i++) {
+        header * freelist = &freelistSentinels[i];
+        if (freelist->next == freelist) {
+            continue;
+        }
         assert(freelist != NULL);
         header * head_list = freelist;
+        header * current_list = freelist->next;
 
-        while(current_list != freelist) {
+        while(true) {
             if (get_size(current_list) == input){
-                REMOVE_from_freelist(current_list);
-                set_state(current_list,ALLOCATED);
+                current_list->prev->next = current_list->next;
+                current_list->next->prev = current_list->prev;
+                set_state(current_list, ALLOCATED);
                 assert(current_list != NULL);
                 return current_list;
             }
@@ -259,9 +256,9 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
                 return split_block(current_list, input);
             }
 
-//            if (current_list -> next == head_list) {
-//                break;
-//            }
+            if (current_list -> next == head_list) {
+                break;
+            }
             current_list = current_list -> next;
         }
 
@@ -338,12 +335,14 @@ static inline header * split_block(header * current_list, size_t input) {
             insert_into_freelist(cut_block);
         }
         assert(new_current != NULL);
+        set_state(new_current, ALLOCATED);
         return new_current;
 
     } else {
         current_list->prev->next = current_list->next;
         current_list->next->prev = current_list->prev;
         assert(current_list != NULL);
+        set_state(current_list, ALLOCATED);
         return current_list;
 
     }
@@ -371,7 +370,7 @@ static inline void insert_into_freelist(header * hdr) {
 
 static inline void REMOVE_from_freelist(header * hdr) {
     assert(hdr != NULL);
-    if(hdr->prev == NULL || hdr->next == NULL){
+    if(hdr->prev == NULL && hdr->next == NULL){
         return;
     }
 
