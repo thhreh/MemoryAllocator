@@ -259,7 +259,6 @@ static  inline header *find_freelist_pointer(size_t input) {
             }
             current_list = current_list -> next;
         }
-        break;
 
 
     }
