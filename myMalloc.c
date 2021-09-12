@@ -86,6 +86,8 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
+static inline void insert_chunk_to_freelist();
+static inline bool last_freelist();
 
 
 static void init();
@@ -220,14 +222,17 @@ static inline header * allocate_object(size_t raw_size) {
     }
 
     header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
-    assert(requested_pointer != NULL);
+    while (requested_pointer == NULL) {
+        insert_chunk_to_freelist();
+        requested_pointer = find_freelist_pointer(actual_size, raw_size);
+    }
 
     set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
 
 }
 
-static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
+static inline header *find_freelist_pointer(size_t input) {
     size_t index = N_LISTS - 1;
     if ((input - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
         index = N_LISTS - 1;
@@ -264,54 +269,52 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
     }
 
-    header * newHeader = allocate_chunk(ARENA_SIZE);
-    header * left_fencepost = get_left_header(newHeader);
-    header * prev_right_fencepost = get_left_header(left_fencepost);
+    return NULL;
 
+}
 
-//    case 1: new chunk is adjecent and it is unallocated
+static inline void insert_chunk_to_freelist() {
+    header * block = allocate_chunk(ARENA_SIZE);
+    header * prevblock = block;
+    header * prevFencePost = get_header_from_offset(block, -ALLOC_HEADER_SIZE);
+    bool updated = false;
 
-    if (prev_right_fencepost == lastFencePost) {
-        header * prev_header = get_left_header(prev_right_fencepost);
-        if (get_state(prev_header) == UNALLOCATED) {
-            set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            set_state(prev_header, UNALLOCATED);
-            get_right_header(newHeader)->left_size = get_size(prev_header);
-            size_t index = N_LISTS - 1;
-            if ((get_size(prev_header) - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
-                index = N_LISTS - 1;
-            } else {
-                index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
+    // coalescing when the two chunks are adjacent
+    if (((char *)prevFencePost - ALLOC_HEADER_SIZE) == (char *) lastFencePost) {
+        header * left_to_lastFP = get_left_header(lastFencePost);
+        // Unallocated memory before last fence post.
+        size_t left_block_size = 0;
+        if (get_state(left_to_lastFP) == UNALLOCATED) {
+            left_block_size = get_size(left_to_lastFP);
+            if (last_freelist(left_to_lastFP)) {
+                updated = true;
+            } else{
+                REMOVE_from_freelist(left_to_lastFP);
             }
-            REMOVE_from_freelist(prev_header);
-            insert_into_freelist(prev_header);
-            lastFencePost = get_right_header(newHeader);
-
-
-            return allocate_object(raw_size);
-//            case 2: new chunk is adjecent and it is allocated
-        } else {
-
-            set_size(prev_right_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            get_right_header(newHeader)->left_size = get_size(prev_right_fencepost);
-            set_state(prev_right_fencepost, UNALLOCATED);
-            insert_into_freelist(prev_right_fencepost);
-            lastFencePost = get_right_header(newHeader);
-            return allocate_object(raw_size);
-
         }
-//        case 3: not adjacent
+        block = get_header_from_offset(lastFencePost, -left_block_size);
+        set_size(block, 2*ALLOC_HEADER_SIZE + get_size(prevblock) + left_block_size);
+        block->left_size = left_block_size? left_to_lastFP->left_size : lastFencePost->left_size;
+        set_state(block, UNALLOCATED);
     } else {
-        insert_into_freelist(newHeader);
-        lastFencePost = get_right_header(newHeader);
-        insert_os_chunk(left_fencepost);
-        return allocate_object(raw_size);
+        insert_os_chunk(prevFencePost);
     }
 
+    lastFencePost = get_header_from_offset(prevblock, get_size(prevblock));
+    lastFencePost->left_size = get_size(block);
 
+    // Insert chunk into the free list
+    if (!updated){
+        header * freelist = &freelistSentinels[N_LISTS - 1];
+        block->next = freelist->next;
+        freelist->next = block;
+        block->next->prev = block;
+        block->prev = freelist;
+    }
+}
 
-
-
+static inline bool last_freelist(header * hdr){
+    return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
 }
 
 
