@@ -272,6 +272,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
     if (prev_right_fencepost == lastFencePost) {
         header * prev_header = get_left_header(prev_right_fencepost);
+        assert(prev_header != NULL);
         if (get_state(prev_header) == UNALLOCATED) {
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
@@ -361,7 +362,9 @@ static inline void insert_into_freelist(header * hdr) {
 }
 
 static inline void REMOVE_from_freelist(header * hdr) {
-    assert(hdr != NULL);
+    if(hdr == NULL) {
+      return
+    }
     if (hdr->prev == NULL || hdr->next == NULL || hdr->prev->next == NULL|| hdr->next->prev == NULL) {
         return;
     };
