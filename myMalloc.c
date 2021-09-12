@@ -269,19 +269,13 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     header * left_fencepost = get_left_header(newHeader);
     header * prev_right_header = get_left_header(left_fencepost);
 
-    bool update = false;
-
 //    case 1: new chunk is adjecent and it is unallocated
 
     if (prev_right_header == lastFencePost) {
         header * prev_header = get_left_header(lastFencePost);
         if (get_state(prev_header) == UNALLOCATED) {
-
-            if (last_freelist(prev_header)) {
-                update = true;
-            } else{
                 REMOVE_from_freelist(prev_header);
-            }
+            
 
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
@@ -292,9 +286,9 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-            if (!update) {
-                insert_into_freelist(prev_header);
-            }
+            
+            insert_into_freelist(prev_header);
+            
 
             lastFencePost = get_right_header(newHeader);
 
@@ -624,7 +618,3 @@ void my_free(void * p) {
 bool verify(){
 
 }
-
-
-
-
