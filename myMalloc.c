@@ -268,7 +268,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_left_header(newHeader);
     header * prev_right_header = get_left_header(left_fencepost);
-    
+
     bool update = false;
 
 //    case 1: new chunk is adjecent and it is unallocated
@@ -624,3 +624,7 @@ void my_free(void * p) {
 bool verify(){
 
 }
+
+
+
+
