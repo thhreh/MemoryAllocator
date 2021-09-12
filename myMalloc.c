@@ -87,7 +87,8 @@ static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
 static inline void insert_chunk_to_freelist();
-static inline bool last_freelist();
+static inline bool freeblock_check();
+static inline int get_list_index();
 
 
 static void init();
@@ -278,16 +279,18 @@ static inline void insert_chunk_to_freelist() {
 
         header * last_block = get_left_header(last_fencepost);
         if (get_state(last_block) == UNALLOCATED) {
+            bool fl = freeblock_check(last_block);
 
             set_size(last_block, get_size(last_block) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(last_block, UNALLOCATED);
             right_fencepost->left_size = get_size(last_block);
-            REMOVE_from_freelist(last_block);
-            insert_into_freelist(last_block);
+            if (!(fl == true && get_list_index(get_size(last_block) - ALLOC_HEADER_SIZE) == N_LISTS - 1)) {
+                REMOVE_from_freelist(last_block);
+                insert_into_freelist(last_block);
+            }
+
             lastFencePost = right_fencepost;
             return;
-
-
         }	//Case AB: If last_block is ALLOCATED
         else {
             set_size(last_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
@@ -295,7 +298,6 @@ static inline void insert_chunk_to_freelist() {
             set_state(last_fencepost, UNALLOCATED);
             insert_into_freelist(last_fencepost);
             lastFencePost = right_fencepost;
-
             return;
         }
 
@@ -303,18 +305,28 @@ static inline void insert_chunk_to_freelist() {
     else {
 
         insert_into_freelist(newHeader);
-
         lastFencePost = right_fencepost;
         insert_os_chunk(left_fencepost);
-
         return;
     }
 
 }
+static inline int get_list_index(size_t size) {
+    if (size > (N_LISTS - 1) * 8) {
+        return N_LISTS - 1;
+}
+        return (size / 8) - 1;
+}
 
+static inline bool freeblock_check(header* hdr){
+    int listidx = get_list_index(get_size(hdr) - ALLOC_HEADER_SIZE);
 
-static inline bool last_freelist(header * hdr){
-    return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
+    //If unallocated block is not in final freelist, remove it and insert again
+    if (listidx != N_LISTS - 1) {
+        return false;
+    }
+
+    return true;
 }
 
 
