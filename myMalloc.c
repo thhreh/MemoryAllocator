@@ -272,15 +272,21 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
 
     if (prev_right_fencepost == lastFencePost) {
         header * prev_header = get_left_header(prev_right_fencepost);
-        assert(prev_header != NULL);
         if (get_state(prev_header) == UNALLOCATED) {
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
-            REMOVE_from_freelist(prev_header);
-            insert_into_freelist(prev_header);
-            lastFencePost = get_right_header(newHeader);
-
+            size_t index = N_LISTS - 1;
+            if ((get_size(prev_header) - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
+                index = N_LISTS - 1;
+            } else {
+                index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
+            }
+            if (index == N_LISTS - 1) {
+                REMOVE_from_freelist(prev_header);
+                insert_into_freelist(prev_header);
+                lastFencePost = get_right_header(newHeader);
+            }
 
             return allocate_object(raw_size);
 //            case 2: new chunk is adjecent and it is allocated
@@ -362,12 +368,7 @@ static inline void insert_into_freelist(header * hdr) {
 }
 
 static inline void REMOVE_from_freelist(header * hdr) {
-    if(hdr == NULL) {
-      return;
-    }
-    if (hdr->prev == NULL || hdr->next == NULL || hdr->prev->next == NULL|| hdr->next->prev == NULL) {
-        return;
-    };
+    assert(hdr != NULL);
     hdr->prev->next = hdr->next;
     hdr->next->prev = hdr->prev;
 }
