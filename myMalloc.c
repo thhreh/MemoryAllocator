@@ -265,13 +265,12 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     }
 
     header * newHeader = allocate_chunk(ARENA_SIZE);
-    header * left_fencepost = get_header_from_offset(newHeader, -ALLOC_HEADER_SIZE);
-    header * prev_right_fencepost = get_header_from_offset(left_fencepost, -ALLOC_HEADER_SIZE);
+    header * left_fencepost = get_left_header_(newHeader);
 
 //    case 1: new chunk is adjecent and it is unallocated
 
     if (prev_right_fencepost == lastFencePost) {
-        header * prev_header = get_left_header(prev_right_fencepost);
+        header * prev_header = get_left_header(lastFencePost);
         if (get_state(prev_header) == UNALLOCATED) {
             REMOVE_from_freelist(prev_header);
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
