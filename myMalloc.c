@@ -234,15 +234,18 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     } else {
         index = (input - ALLOC_HEADER_SIZE)/8 - 1;
     }
+    header *freelist_initial = &freelistSentinels[index];
+    while (freelist_initial->next == freelist_initial && index < N_LISTS - 1) {
+        index++;
+        freelist_initial = &freelistSentinels[index];
+    }
 
-    for (int i = index; i < N_LISTS; i++) {
-        header * freelist = &freelistSentinels[i];
-        if (freelist->next == freelist) {
-            continue;
-        }
+
+    for (header * current_list = freelist_initial->next; current_list!=freelist_initial;) {
+        header * freelist = &freelistSentinels[index];
+        header* current_list = freelist->next;
         assert(freelist != NULL);
         header * head_list = freelist;
-        header * current_list = freelist->next;
 
         while(current_list != freelist) {
             if (get_size(current_list) == input){
@@ -368,11 +371,6 @@ static inline void insert_into_freelist(header * hdr) {
 
 static inline void REMOVE_from_freelist(header * hdr) {
     assert(hdr != NULL);
-    hdr->prev = hdr->prev;
-    hdr->next = hdr->next;
-    hdr->next->prev = hdr->next->prev;
-    hdr->prev->next = hdr->prev->next;
-
     if(hdr->prev == NULL || hdr->next == NULL){
         return;
     }
