@@ -86,6 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
+static inline bool last_freelist()
 
 
 static void init();
@@ -265,14 +266,23 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     }
 
     header * newHeader = allocate_chunk(ARENA_SIZE);
-    header * left_fencepost = get_left_header_(newHeader);
+    header * left_fencepost = get_left_header(newHeader);
+    header * prev_right_header = get_left_header(left_fencepost);
+    
+    bool update = false;
 
 //    case 1: new chunk is adjecent and it is unallocated
 
-    if (prev_right_fencepost == lastFencePost) {
+    if (prev_right_header == lastFencePost) {
         header * prev_header = get_left_header(lastFencePost);
         if (get_state(prev_header) == UNALLOCATED) {
-            REMOVE_from_freelist(prev_header);
+
+            if (last_freelist(prev_header)) {
+                update = true;
+            } else{
+                REMOVE_from_freelist(prev_header);
+            }
+
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
@@ -282,12 +292,10 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-            header * lastfreelist = &freelistSentinels[N_LISTS - 1];
-            prev_header->next = lastfreelist->next;
-            lastfreelist->next = prev_header;
-            prev_header->next->prev = prev_header;
-            prev_header->prev = lastfreelist;
-            insert_into_freelist(prev_header);
+            if (!update) {
+                insert_into_freelist(prev_header);
+            }
+
             lastFencePost = get_right_header(newHeader);
 
 
@@ -376,6 +384,10 @@ static inline void REMOVE_from_freelist(header * hdr) {
     hdr->next->prev = hdr->prev;
 }
 
+
+static inline bool last_freelist(header * hdr){
+    return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
+}
 
 /**
  * @brief Helper to get the header from a pointer allocated with malloc
