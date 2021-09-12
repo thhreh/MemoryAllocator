@@ -221,10 +221,10 @@ static inline header * allocate_object(size_t raw_size) {
         actual_size = sizeof (header);
     }
 
-    header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
+    header *requested_pointer = find_freelist_pointer(actual_size);
     while (requested_pointer == NULL) {
         insert_chunk_to_freelist();
-        requested_pointer = find_freelist_pointer(actual_size, raw_size);
+        requested_pointer = find_freelist_pointer(actual_size);
     }
 
     set_state(requested_pointer, ALLOCATED);
@@ -247,9 +247,8 @@ static inline header *find_freelist_pointer(size_t input) {
         }
         assert(freelist != NULL);
         header * head_list = freelist;
-        header * current_list = freelist->next;
 
-        while(true) {
+        for(header * current_list = freelist->next; current_list != freelist; current_list = current_list->next) {
             if (get_size(current_list) == input){
                 current_list->prev->next = current_list->next;
                 current_list->next->prev = current_list->prev;
@@ -261,10 +260,6 @@ static inline header *find_freelist_pointer(size_t input) {
                 return split_block(current_list, input);
             }
 
-            if (current_list -> next == head_list) {
-                break;
-            }
-            current_list = current_list -> next;
         }
 
     }
@@ -316,6 +311,7 @@ static inline void insert_chunk_to_freelist() {
     }
 
 }
+
 
 static inline bool last_freelist(header * hdr){
     return get_size(hdr) >= (N_LISTS+2)*sizeof(size_t);
