@@ -440,7 +440,6 @@ static inline void deallocate_object(void * p) {
 
     }
 
-}
 
 /**
  * @brief Helper to detect cycles in the free list
