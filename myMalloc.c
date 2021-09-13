@@ -289,7 +289,7 @@ static inline void add_chunk() {
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
             size_t index = N_LISTS - 1;
-            if ((get_size(prev_header) < (N_LISTS + 2) * 8)) {
+            if (get_size(prev_header) < (N_LISTS + 2) * sizeof(size_t)) {
                 REMOVE_from_freelist(prev_header);
                 insert_into_freelist(prev_header);
             }
@@ -414,7 +414,7 @@ static inline void deallocate_object(void * p) {
         set_state(real_header,UNALLOCATED);
         set_size(left_location, get_size(left_location) + get_size(real_header));
         get_right_header(left_location)->left_size = get_size(left_location);
-        if ((get_size(left_location) < (N_LISTS + 2) * 8)) {
+        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)) {
             REMOVE_from_freelist(left_location);
             insert_into_freelist(left_location);
         }
@@ -432,7 +432,7 @@ static inline void deallocate_object(void * p) {
         set_size(left_location, get_size(left_location) + get_size(real_header) + get_size(right_location));
         get_right_header(left_location) ->left_size = get_size(left_location);
 
-        if ((get_size(left_location) < (N_LISTS + 2) * 8))
+        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)){
             REMOVE_from_freelist(left_location);
             insert_into_freelist(left_location);
         }
