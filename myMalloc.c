@@ -317,7 +317,6 @@ static inline void add_chunk() {
 static inline header * split_block(header * current_list, size_t input) {
     size_t input_block_size = get_size(current_list);
     if (get_size(current_list) - input >= sizeof (header)) {
-
         size_t left_block_size = get_size(current_list) - input;
         set_size(current_list, left_block_size);
         header* cut_block = current_list;
@@ -328,9 +327,8 @@ static inline header * split_block(header * current_list, size_t input) {
         new_current ->left_size = get_size(cut_block);
         header * right_header = get_right_header(new_current);
         right_header->left_size = get_size(new_current);
-        bool is_free = last_list_check(cut_block);
 
-        if (!(is_free == true && get_size(cut_block) < ((N_LISTS + 2) * sizeof (header)))) {
+        if (get_size(cut_block) < (N_LISTS+2) * sizeof(size_t)) {
             cut_block->prev->next = cut_block->next;
             cut_block->next->prev = cut_block->prev;
             insert_into_freelist(cut_block);
@@ -381,9 +379,9 @@ static inline bool last_list_check(header* hdr) {
 
     int listidx = N_LISTS - 1;
     if (get_size(hdr) > (N_LISTS - 1) * 8) {
-        listidx = N_LISTS - 1;
-    } else {
-        listidx= (get_size(hdr) / 8) - 1;
+        listidx  = N_LISTS - 1;
+    } else{
+        listidx = (get_size(hdr) / 8) - 1;
     }
 
 
