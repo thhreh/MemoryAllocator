@@ -86,6 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
+static inline void add_chunk()
 
 
 static void init();
@@ -221,6 +222,7 @@ static inline header * allocate_object(size_t raw_size) {
 
     header *requested_pointer = find_freelist_pointer(actual_size);
     while(requested_pointer == NULL) {
+        add_chunk();
         requested_pointer = find_freelist_pointer(actual_size);
     }
 
@@ -266,7 +268,13 @@ static  inline header *find_freelist_pointer(size_t input) {
         }
 
     }
+    return NULL;
 
+
+
+}
+
+static inline void add_chunk() {
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_left_header(newHeader);
     header * prev_right_fencepost = get_left_header(left_fencepost);
@@ -291,8 +299,6 @@ static  inline header *find_freelist_pointer(size_t input) {
             insert_into_freelist(prev_header);
             lastFencePost = get_right_header(newHeader);
 
-
-            return NULL;
 //            case 2: new chunk is adjecent and it is allocated
         } else {
 
@@ -301,19 +307,14 @@ static  inline header *find_freelist_pointer(size_t input) {
             set_state(prev_right_fencepost, UNALLOCATED);
             insert_into_freelist(prev_right_fencepost);
             lastFencePost = get_right_header(newHeader);
-            return NULL;
-
         }
 //        case 3: not adjacent
     } else {
         insert_into_freelist(newHeader);
         lastFencePost = get_right_header(newHeader);
         insert_os_chunk(left_fencepost);
-        return NULL;
     }
-
-
-
+    
 }
 
 
