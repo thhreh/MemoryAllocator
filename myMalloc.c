@@ -86,7 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
-static inline void add_chunk();
+static inline void add_chunk()
 
 
 static void init();
@@ -221,12 +221,11 @@ static inline header * allocate_object(size_t raw_size) {
     }
 
     header *requested_pointer = find_freelist_pointer(actual_size);
-    if (requested_pointer == NULL) {
+    while(requested_pointer == NULL) {
         add_chunk();
         requested_pointer = find_freelist_pointer(actual_size);
     }
-
-
+    
     set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
 
