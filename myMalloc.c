@@ -225,7 +225,7 @@ static inline header * allocate_object(size_t raw_size) {
         add_chunk();
         requested_pointer = find_freelist_pointer(actual_size);
     }
-    
+
     set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
 
@@ -277,14 +277,14 @@ static inline void add_chunk() {
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_left_header(newHeader);
     header * prev_right_fencepost = get_left_header(left_fencepost);
-    header * prev_header = get_left_header(prev_right_fencepost);
 
 
 //    case 1: new chunk is adjecent and it is unallocated
 
     if (prev_right_fencepost == lastFencePost) {
-
+        header * prev_header = get_left_header(prev_right_fencepost);
         if (get_state(prev_header) == UNALLOCATED) {
+
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
@@ -294,13 +294,14 @@ static inline void add_chunk() {
             } else {
                 index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
             }
-            REMOVE_from_freelist(prev_header);
-            insert_into_freelist(prev_header);
+            if (index != N_LISTS - 1) {
+                REMOVE_from_freelist(prev_header);
+                insert_into_freelist(prev_header);
+            }
             lastFencePost = get_right_header(newHeader);
 
 //            case 2: new chunk is adjecent and it is allocated
         } else {
-
             set_size(prev_right_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             get_right_header(newHeader)->left_size = get_size(prev_right_fencepost);
             set_state(prev_right_fencepost, UNALLOCATED);
@@ -397,6 +398,7 @@ static inline header * ptr_to_header(void * p) {
  */
 static inline void deallocate_object(void * p) {
     // TODO implement deallocation
+    int index = N_LISTS - 1;
     if (p == NULL) {
         return;
     }
@@ -413,12 +415,19 @@ static inline void deallocate_object(void * p) {
         set_state(real_header,UNALLOCATED);
         insert_into_freelist(real_header);
 
-    } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
+    } else if(get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
         set_state(real_header,UNALLOCATED);
-        REMOVE_from_freelist(left_location);
         set_size(left_location, get_size(left_location) + get_size(real_header));
         get_right_header(left_location)->left_size = get_size(left_location);
-        insert_into_freelist(left_location);
+        if ((get_size(left_location) - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
+            index = N_LISTS - 1;
+        } else {
+            index = (get_size(left_location) - ALLOC_HEADER_SIZE)/8 - 1;
+        }
+        if (index != N_LISTS - 1) {
+            REMOVE_from_freelist(left_location);
+            insert_into_freelist(left_location);
+        }
 
     }else if (get_state(left_location) != UNALLOCATED && get_state(right_location) == UNALLOCATED) {
         set_state(real_header,UNALLOCATED);
@@ -429,11 +438,20 @@ static inline void deallocate_object(void * p) {
 
     }else if (get_state(left_location) == UNALLOCATED && get_state(right_location) == UNALLOCATED) {
         set_state(real_header,UNALLOCATED);
-        REMOVE_from_freelist(left_location);
+
         REMOVE_from_freelist(right_location);
         set_size(left_location, get_size(left_location) + get_size(real_header) + get_size(right_location));
         get_right_header(left_location) ->left_size = get_size(left_location);
-        insert_into_freelist(left_location);
+        if ((get_size(left_location) - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
+            index = N_LISTS - 1;
+        } else {
+            index = (get_size(left_location) - ALLOC_HEADER_SIZE)/8 - 1;
+        }
+        if (index != N_LISTS - 1) {
+            REMOVE_from_freelist(left_location);
+            insert_into_freelist(left_location);
+        }
+
 
     }
 
