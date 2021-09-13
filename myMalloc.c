@@ -86,7 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
-static inline void add_chunk()
+static inline void add_chunk();
 
 
 static void init();
