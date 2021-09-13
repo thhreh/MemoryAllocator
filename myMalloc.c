@@ -275,44 +275,49 @@ static  inline header *find_freelist_pointer(size_t input) {
 }
 
 static inline void add_chunk() {
-    header * newHeader = allocate_chunk(ARENA_SIZE);
-    header * left_fencepost = get_left_header(newHeader);
-    header * prev_right_fencepost = get_left_header(left_fencepost);
-    header * prev_header = get_left_header(prev_right_fencepost);
+    header *new_header_ptr = allocate_chunk(ARENA_SIZE);
+    header *left_fencepost = get_left_header(new_header_ptr);
+    header *left_left_header = get_left_header(left_fencepost);
+    header *last_block_from_previous = get_left_header(left_left_header);
+
+    //if this new chunk's left fencepost is right next to the previous chunk's fencepost, that means we have adjacent
+    // fencePosts and we should coalesce them
 
 
-//    case 1: new chunk is adjecent and it is unallocated
+    if (left_left_header == lastFencePost) {
 
-    if (prev_right_fencepost == lastFencePost) {
+        if (get_state(last_block_from_previous) == ALLOCATED) {
 
-        if (get_state(prev_header) == UNALLOCATED) {
-            set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            set_state(prev_header, UNALLOCATED);
-            get_right_header(newHeader)->left_size = get_size(prev_header);
-            size_t index = N_LISTS - 1;
-            if ((get_size(prev_header) - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
-                index = N_LISTS - 1;
-            } else {
-                index = (get_size(prev_header) - ALLOC_HEADER_SIZE)/8 - 1;
-            }
-            REMOVE_from_freelist(prev_header);
-            insert_into_freelist(prev_header);
-            lastFencePost = get_right_header(newHeader);
+            set_size(left_left_header, 2 * ALLOC_HEADER_SIZE + get_size(new_header_ptr));
+            get_right_header(new_header_ptr)->left_size = get_size(left_left_header);
+            set_state(left_left_header, UNALLOCATED);
+            insert_into_freelist(left_left_header);
 
-//            case 2: new chunk is adjecent and it is allocated
+            lastFencePost = get_right_header(new_header_ptr);
+            return;
+
         } else {
 
-            set_size(prev_right_fencepost, get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
-            get_right_header(newHeader)->left_size = get_size(prev_right_fencepost);
-            set_state(prev_right_fencepost, UNALLOCATED);
-            insert_into_freelist(prev_right_fencepost);
-            lastFencePost = get_right_header(newHeader);
+            set_size(last_block_from_previous,
+                     get_size(last_block_from_previous) + 2 * ALLOC_HEADER_SIZE + get_size(new_header_ptr));
+            get_right_header(new_header_ptr)->left_size = get_size(last_block_from_previous);
+            set_state(last_block_from_previous, UNALLOCATED);
+
+            REMOVE_from_freelist(last_block_from_previous);
+            insert_into_freelist(last_block_from_previous);
+
+
+            lastFencePost = get_right_header(new_header_ptr);
+            return;
+
         }
-//        case 3: not adjacent
+
     } else {
-        insert_into_freelist(newHeader);
-        lastFencePost = get_right_header(newHeader);
+        insert_into_freelist(new_header_ptr);
+
+        lastFencePost = get_right_header(new_header_ptr);
         insert_os_chunk(left_fencepost);
+        return;
     }
 
 }
