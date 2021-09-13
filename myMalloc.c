@@ -218,10 +218,12 @@ static inline header * allocate_object(size_t raw_size) {
     if (actual_size <= sizeof (header)) {
         actual_size = sizeof (header);
     }
-
-    header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
-    assert(requested_pointer != NULL);
     
+
+    header *requested_pointer = find_freelist_pointer(actual_size - ALLOC_HEADER_SIZE, raw_size);
+    assert(requested_pointer != NULL);
+
+    set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
 
 }
@@ -247,7 +249,6 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             if (get_size(current_list) == input){
                 current_list->prev->next = current_list->next;
                 current_list->next->prev = current_list->prev;
-                set_state(current_list, ALLOCATED);
                 assert(current_list != NULL);
                 return current_list;
             }
@@ -335,14 +336,12 @@ static inline header * split_block(header * current_list, size_t input) {
             insert_into_freelist(cut_block);
         }
         assert(new_current != NULL);
-        set_state(new_current, ALLOCATED);
         return new_current;
 
     } else {
         current_list->prev->next = current_list->next;
         current_list->next->prev = current_list->prev;
         assert(current_list != NULL);
-        set_state(current_list, ALLOCATED);
         return current_list;
 
     }
