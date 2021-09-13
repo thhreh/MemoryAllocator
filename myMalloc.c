@@ -218,9 +218,8 @@ static inline header * allocate_object(size_t raw_size) {
     if (actual_size <= sizeof (header)) {
         actual_size = sizeof (header);
     }
-    
 
-    header *requested_pointer = find_freelist_pointer(actual_size - ALLOC_HEADER_SIZE, raw_size);
+    header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
     assert(requested_pointer != NULL);
 
     set_state(requested_pointer, ALLOCATED);
@@ -228,7 +227,7 @@ static inline header * allocate_object(size_t raw_size) {
 
 }
 
-static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
+static  inline header *find_freelist_pointer(size_t input) {
     size_t index = N_LISTS - 1;
     if ((input - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
         index = N_LISTS - 1;
@@ -268,12 +267,13 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     header * newHeader = allocate_chunk(ARENA_SIZE);
     header * left_fencepost = get_left_header(newHeader);
     header * prev_right_fencepost = get_left_header(left_fencepost);
+    header * prev_header = get_left_header(prev_right_fencepost);
 
 
 //    case 1: new chunk is adjecent and it is unallocated
 
     if (prev_right_fencepost == lastFencePost) {
-        header * prev_header = get_left_header(prev_right_fencepost);
+
         if (get_state(prev_header) == UNALLOCATED) {
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
@@ -289,7 +289,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             lastFencePost = get_right_header(newHeader);
 
 
-            return allocate_object(raw_size);
+            return find_freelist_pointer(input);
 //            case 2: new chunk is adjecent and it is allocated
         } else {
 
@@ -298,7 +298,7 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
             set_state(prev_right_fencepost, UNALLOCATED);
             insert_into_freelist(prev_right_fencepost);
             lastFencePost = get_right_header(newHeader);
-            return allocate_object(raw_size);
+            return find_freelist_pointer(input);
 
         }
 //        case 3: not adjacent
@@ -306,11 +306,9 @@ static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
         insert_into_freelist(newHeader);
         lastFencePost = get_right_header(newHeader);
         insert_os_chunk(left_fencepost);
-        return allocate_object(raw_size);
+        return find_freelist_pointer(input);
     }
-
-
-
+    
 
 
 }
