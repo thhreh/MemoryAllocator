@@ -87,7 +87,7 @@ static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
 static inline void add_chunk();
-
+static inline bool last_list_check();
 
 static void init();
 
@@ -284,12 +284,13 @@ static inline void add_chunk() {
     if (prev_right_fencepost == lastFencePost) {
         header * prev_header = get_left_header(prev_right_fencepost);
         if (get_state(prev_header) == UNALLOCATED) {
+            bool is_free = last_list_check(prev_header);
 
             set_size(prev_header, get_size(prev_header) + get_size(newHeader) + 2 * ALLOC_HEADER_SIZE);
             set_state(prev_header, UNALLOCATED);
             get_right_header(newHeader)->left_size = get_size(prev_header);
             size_t index = N_LISTS - 1;
-            if (get_size(prev_header) < (N_LISTS + 2) * sizeof(size_t)) {
+            if (!(is_free == true && get_size(prev_header) < ((N_LISTS + 2) * sizeof (header)))) {
                 REMOVE_from_freelist(prev_header);
                 insert_into_freelist(prev_header);
             }
@@ -316,6 +317,7 @@ static inline void add_chunk() {
 static inline header * split_block(header * current_list, size_t input) {
     size_t input_block_size = get_size(current_list);
     if (get_size(current_list) - input >= sizeof (header)) {
+
         size_t left_block_size = get_size(current_list) - input;
         set_size(current_list, left_block_size);
         header* cut_block = current_list;
@@ -326,8 +328,9 @@ static inline header * split_block(header * current_list, size_t input) {
         new_current ->left_size = get_size(cut_block);
         header * right_header = get_right_header(new_current);
         right_header->left_size = get_size(new_current);
+        bool is_free = last_list_check(cut_block);
 
-        if (get_size(cut_block) < (N_LISTS+2) * sizeof(size_t)) {
+        if (!(is_free == true && get_size(cut_block) < ((N_LISTS + 2) * sizeof (header)))) {
             cut_block->prev->next = cut_block->next;
             cut_block->next->prev = cut_block->prev;
             insert_into_freelist(cut_block);
@@ -374,6 +377,23 @@ static inline void REMOVE_from_freelist(header * hdr) {
     hdr->next->prev = hdr->prev;
 }
 
+static inline bool last_list_check(header* hdr) {
+
+    int listidx = N_LISTS - 1;
+    if (get_size(hdr) > (N_LISTS - 1) * 8) {
+        listidx = N_LISTS - 1;
+    } else {
+        listidx= (get_size(hdr) / 8) - 1;
+    }
+
+
+    if (listidx != N_LISTS - 1) {
+        return false;
+    }
+
+    return true;
+}
+
 
 /**
  * @brief Helper to get the header from a pointer allocated with malloc
@@ -411,10 +431,11 @@ static inline void deallocate_object(void * p) {
         insert_into_freelist(real_header);
 
     } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
+        bool is_free = last_list_check(left_location);
         set_state(real_header, UNALLOCATED);
         set_size(left_location, get_size(left_location) + get_size(real_header));
         get_right_header(left_location)->left_size = get_size(left_location);
-        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)) {
+        if (!(is_free == true && get_size(left_location) < ((N_LISTS + 2) * sizeof (header)))) {
             REMOVE_from_freelist(left_location);
             insert_into_freelist(left_location);
         }
@@ -427,12 +448,13 @@ static inline void deallocate_object(void * p) {
         insert_into_freelist(real_header);
 
     } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) == UNALLOCATED) {
+        bool is_free = last_list_check(left_location);
         set_state(real_header, UNALLOCATED);
         REMOVE_from_freelist(right_location);
         set_size(left_location, get_size(left_location) + get_size(real_header) + get_size(right_location));
         get_right_header(left_location)->left_size = get_size(left_location);
 
-        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)) {
+        if (!(is_free == true && get_size(left_location) < ((N_LISTS + 2) * sizeof (header)))) {
             REMOVE_from_freelist(left_location);
             insert_into_freelist(left_location);
         }
