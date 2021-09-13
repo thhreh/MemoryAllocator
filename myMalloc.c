@@ -397,21 +397,21 @@ static inline void deallocate_object(void * p) {
     if (p == NULL) {
         return;
     }
-    header* real_header = ptr_to_header(p);
+    header *real_header = ptr_to_header(p);
     if (get_state(real_header) != ALLOCATED) {
         printf("Double Free Detected\n");
         printf("Assertion Failed!\n");
         assert(true);
         exit(1);
     }
-    header* left_location = get_left_header(real_header);
-    header* right_location = get_right_header(real_header);
+    header *left_location = get_left_header(real_header);
+    header *right_location = get_right_header(real_header);
     if (get_state(left_location) != UNALLOCATED && get_state(right_location) != UNALLOCATED) {
-        set_state(real_header,UNALLOCATED);
+        set_state(real_header, UNALLOCATED);
         insert_into_freelist(real_header);
 
-    } else if(get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
-        set_state(real_header,UNALLOCATED);
+    } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) != UNALLOCATED) {
+        set_state(real_header, UNALLOCATED);
         set_size(left_location, get_size(left_location) + get_size(real_header));
         get_right_header(left_location)->left_size = get_size(left_location);
         if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)) {
@@ -419,26 +419,27 @@ static inline void deallocate_object(void * p) {
             insert_into_freelist(left_location);
         }
 
-    }else if (get_state(left_location) != UNALLOCATED && get_state(right_location) == UNALLOCATED) {
-        set_state(real_header,UNALLOCATED);
+    } else if (get_state(left_location) != UNALLOCATED && get_state(right_location) == UNALLOCATED) {
+        set_state(real_header, UNALLOCATED);
         REMOVE_from_freelist(right_location);
         set_size(real_header, get_size(real_header) + get_size(right_location));
-        get_right_header(real_header) -> left_size = get_size(real_header);
+        get_right_header(real_header)->left_size = get_size(real_header);
         insert_into_freelist(real_header);
 
-    }else if (get_state(left_location) == UNALLOCATED && get_state(right_location) == UNALLOCATED) {
-        set_state(real_header,UNALLOCATED);
+    } else if (get_state(left_location) == UNALLOCATED && get_state(right_location) == UNALLOCATED) {
+        set_state(real_header, UNALLOCATED);
         REMOVE_from_freelist(right_location);
         set_size(left_location, get_size(left_location) + get_size(real_header) + get_size(right_location));
-        get_right_header(left_location) ->left_size = get_size(left_location);
+        get_right_header(left_location)->left_size = get_size(left_location);
 
-        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)){
+        if (get_size(left_location) < (N_LISTS + 2) * sizeof(size_t)) {
             REMOVE_from_freelist(left_location);
             insert_into_freelist(left_location);
         }
 
 
     }
+}
 
 
 /**
