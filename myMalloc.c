@@ -86,8 +86,7 @@ static inline header * find_freelist_pointer();
 static inline header * split_block();
 static inline void insert_into_freelist();
 static inline void REMOVE_from_freelist();
-static inline void add_chunk();
-static inline bool last_list_check();
+
 
 static void init();
 
@@ -220,18 +219,15 @@ static inline header * allocate_object(size_t raw_size) {
         actual_size = sizeof (header);
     }
 
-    header *requested_pointer = find_freelist_pointer(actual_size);
-    while(requested_pointer == NULL) {
-        add_chunk();
-        requested_pointer = find_freelist_pointer(actual_size);
-    }
+    header *requested_pointer = find_freelist_pointer(actual_size, raw_size);
+    assert(requested_pointer != NULL);
 
     set_state(requested_pointer, ALLOCATED);
     return (header*) requested_pointer->data;
 
 }
 
-static  inline header *find_freelist_pointer(size_t input) {
+static  inline header *find_freelist_pointer(size_t input , size_t raw_size) {
     size_t index = N_LISTS - 1;
     if ((input - ALLOC_HEADER_SIZE) > (N_LISTS - 1) * 8) {
         index = N_LISTS - 1;
@@ -241,12 +237,13 @@ static  inline header *find_freelist_pointer(size_t input) {
 
     for (int i = index; i < N_LISTS; i++) {
         header * freelist = &freelistSentinels[i];
-        if (freelist->next == freelist) {
-            continue;
-        }
         assert(freelist != NULL);
         header * head_list = freelist;
         header * current_list = freelist->next;
+
+        while(current_list != freelist) {
+            if (get_size(current_list) == input){
+                current_list->prev->next = current_list->next;
 
         while(true) {
             if (get_size(current_list) == input){
@@ -612,28 +609,3 @@ static void init() {
  */
 void * my_malloc(size_t size) {
     pthread_mutex_lock(&mutex);
-    header * hdr = allocate_object(size);
-    pthread_mutex_unlock(&mutex);
-    return hdr;
-}
-
-void * my_calloc(size_t nmemb, size_t size) {
-    return memset(my_malloc(size * nmemb), 0, size * nmemb);
-}
-
-void * my_realloc(void * ptr, size_t size) {
-    void * mem = my_malloc(size);
-    memcpy(mem, ptr, size);
-    my_free(ptr);
-    return mem;
-}
-
-void my_free(void * p) {
-    pthread_mutex_lock(&mutex);
-    deallocate_object(p);
-    pthread_mutex_unlock(&mutex);
-}
-
-bool verify(){
-
-}
